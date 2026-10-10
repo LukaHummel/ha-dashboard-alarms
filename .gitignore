@@ -218,3 +218,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Dashboard Alarms local artifacts
+node_modules/
+work/
+outputs/

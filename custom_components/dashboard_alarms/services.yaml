@@ -1,0 +1,167 @@
+{
+  "create_alarm": {
+    "name": "Create alarm",
+    "description": "Create a persistent calendar alarm. Returns its UID.",
+    "fields": {
+      "entity_id": {
+        "name": "Alarm calendar",
+        "required": true,
+        "selector": {
+          "entity": {
+            "domain": "calendar",
+            "integration": "dashboard_alarms"
+          }
+        }
+      },
+      "alarm": {
+        "name": "Alarm settings",
+        "required": true,
+        "selector": {
+          "object": {}
+        },
+        "description": "For enable/disable: {enabled: true}. For create/update: start, repeat, weekdays, enabled, description, audio."
+      }
+    }
+  },
+  "update_alarm": {
+    "name": "Update alarm",
+    "description": "Update the complete alarm schedule while preserving its UID.",
+    "fields": {
+      "entity_id": {
+        "name": "Alarm calendar",
+        "required": true,
+        "selector": {
+          "entity": {
+            "domain": "calendar",
+            "integration": "dashboard_alarms"
+          }
+        }
+      },
+      "uid": {
+        "name": "Alarm UID",
+        "required": true,
+        "selector": {
+          "text": {}
+        }
+      },
+      "alarm": {
+        "name": "Alarm settings",
+        "required": true,
+        "selector": {
+          "object": {}
+        },
+        "description": "For enable/disable: {enabled: true}. For create/update: start, repeat, weekdays, enabled, description, audio."
+      }
+    }
+  },
+  "set_enabled": {
+    "name": "Set enabled",
+    "description": "Enable or disable a schedule without deleting it.",
+    "fields": {
+      "entity_id": {
+        "name": "Alarm calendar",
+        "required": true,
+        "selector": {
+          "entity": {
+            "domain": "calendar",
+            "integration": "dashboard_alarms"
+          }
+        }
+      },
+      "uid": {
+        "name": "Alarm UID",
+        "required": true,
+        "selector": {
+          "text": {}
+        }
+      },
+      "alarm": {
+        "name": "Alarm settings",
+        "required": true,
+        "selector": {
+          "object": {}
+        },
+        "description": "For enable/disable: {enabled: true}. For create/update: start, repeat, weekdays, enabled, description, audio."
+      }
+    }
+  },
+  "delete_alarm": {
+    "name": "Delete alarm",
+    "description": "Delete the complete alarm schedule.",
+    "fields": {
+      "entity_id": {
+        "name": "Alarm calendar",
+        "required": true,
+        "selector": {
+          "entity": {
+            "domain": "calendar",
+            "integration": "dashboard_alarms"
+          }
+        }
+      },
+      "uid": {
+        "name": "Alarm UID",
+        "required": true,
+        "selector": {
+          "text": {}
+        }
+      }
+    }
+  },
+  "snooze": {
+    "name": "Snooze",
+    "description": "Postpone the ringing occurrence without changing recurrence.",
+    "fields": {
+      "entity_id": {
+        "name": "Alarm calendar",
+        "required": true,
+        "selector": {
+          "entity": {
+            "domain": "calendar",
+            "integration": "dashboard_alarms"
+          }
+        }
+      },
+      "uid": {
+        "name": "Alarm UID",
+        "required": true,
+        "selector": {
+          "text": {}
+        }
+      },
+      "minutes": {
+        "name": "Snooze minutes",
+        "selector": {
+          "number": {
+            "min": 1,
+            "max": 120,
+            "mode": "box"
+          }
+        }
+      }
+    }
+  },
+  "dismiss": {
+    "name": "Dismiss",
+    "description": "End ringing or cancel a pending snooze; retain the schedule.",
+    "fields": {
+      "entity_id": {
+        "name": "Alarm calendar",
+        "required": true,
+        "selector": {
+          "entity": {
+            "domain": "calendar",
+            "integration": "dashboard_alarms"
+          }
+        }
+      },
+      "uid": {
+        "name": "Alarm UID",
+        "required": true,
+        "selector": {
+          "text": {}
+        }
+      }
+    }
+  }
+}

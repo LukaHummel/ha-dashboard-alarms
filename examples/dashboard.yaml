@@ -1,0 +1,5 @@
+type: custom:dashboard-alarms-card
+entity: calendar.dashboard_alarms
+title: Alarms
+# Optional: limit the scrollable tile area, in pixels.
+# max_height: 600

@@ -1,0 +1,38 @@
+{
+  "title": "Dashboard Alarms",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Dashboard Alarms",
+        "description": "Create an alarm calendar. Times use Home Assistant's timezone. Leave media players empty for events-only operation.",
+        "data": {
+          "name": "Calendar name",
+          "media_players": "Default media players",
+          "sound": "Default sound URL or media-source URI",
+          "snooze_minutes": "Default snooze minutes",
+          "ring_minutes": "Maximum ring minutes"
+        }
+      }
+    },
+    "error": {
+      "invalid_settings": "Enter a name, a valid sound path/URL, and whole minutes between 1 and 120."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Alarm defaults",
+        "data": {
+          "name": "Calendar name",
+          "media_players": "Default media players",
+          "sound": "Default sound URL or media-source URI",
+          "snooze_minutes": "Default snooze minutes",
+          "ring_minutes": "Maximum ring minutes"
+        }
+      }
+    },
+    "error": {
+      "invalid_settings": "Enter a name, a valid sound path/URL, and whole minutes between 1 and 120."
+    }
+  }
+}
