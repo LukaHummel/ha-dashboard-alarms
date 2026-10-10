@@ -13,8 +13,6 @@ import types
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-if (ROOT / "work/alarm-libs").exists():
-    sys.path.insert(0, str(ROOT / "work/alarm-libs"))
 package = types.ModuleType("custom_components.dashboard_alarms")
 package.__path__ = [str(ROOT / "custom_components/dashboard_alarms")]
 sys.modules[package.__name__] = package

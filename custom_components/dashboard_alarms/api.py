@@ -60,7 +60,9 @@ async def ws_list(hass, connection, msg):
     if not connection.user.permissions.check_entity(msg["entity_id"], POLICY_READ):
         raise Unauthorized(entity_id=msg["entity_id"])
     try:
-        connection.send_result(msg["id"], get_manager(hass, msg["entity_id"]).snapshot())
+        snapshot = get_manager(hass, msg["entity_id"]).snapshot()
+        snapshot["can_control"] = connection.user.permissions.check_entity(msg["entity_id"], POLICY_CONTROL)
+        connection.send_result(msg["id"], snapshot)
     except HomeAssistantError as err:
         connection.send_error(msg["id"], "alarm_error", str(err))
 
@@ -102,7 +104,9 @@ async def ws_subscribe(hass, connection, msg):
     @callback
     def send():
         if connection.user.permissions.check_entity(entity_id, POLICY_READ):
-            connection.send_message(websocket_api.event_message(msg["id"], manager.snapshot()))
+            snapshot = manager.snapshot()
+            snapshot["can_control"] = connection.user.permissions.check_entity(entity_id, POLICY_CONTROL)
+            connection.send_message(websocket_api.event_message(msg["id"], snapshot))
     connection.subscriptions[msg["id"]] = manager.subscribe(send)
     connection.send_result(msg["id"])
     send()

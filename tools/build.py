@@ -13,6 +13,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 COMPONENT = ROOT / "custom_components/dashboard_alarms"
+VERSION = json.loads((COMPONENT / "manifest.json").read_text(encoding="utf-8"))["version"]
 
 
 def write_json(path, data):
@@ -72,7 +73,7 @@ def chime():
                 sample += envelope * (math.sin(2 * math.pi * frequency * elapsed)
                                       + .2 * math.sin(2 * math.pi * frequency * 2 * elapsed)) * .22
         samples += struct.pack("<h", int(max(-1, min(1, sample)) * 32767))
-    with wave.open(str(path), "wb") as output:
+    with wave.Wave_write(str(path)) as output:
         output.setnchannels(1)
         output.setsampwidth(2)
         output.setframerate(sample_rate)
@@ -80,7 +81,7 @@ def chime():
 
 
 def package():
-    output = ROOT / "outputs/dashboard-alarms-0.1.0.zip"
+    output = ROOT / f"outputs/dashboard-alarms-{VERSION}.zip"
     output.parent.mkdir(exist_ok=True)
     with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
         for path in sorted(COMPONENT.rglob("*")):
@@ -90,13 +91,14 @@ def package():
             archive.write(path, path.relative_to(ROOT).as_posix())
     print(f"Built {output}")
     shutil.copyfile(ROOT / "README.md", ROOT / "outputs/Dashboard Alarms setup.md")
-    source = ROOT / "outputs/dashboard-alarms-source-0.1.0.zip"
+    source = ROOT / f"outputs/dashboard-alarms-source-{VERSION}.zip"
     with zipfile.ZipFile(source, "w", zipfile.ZIP_DEFLATED) as archive:
-        for directory in ("custom_components/dashboard_alarms", "tests", "tools", "examples"):
+        for directory in ("custom_components/dashboard_alarms", "tests", "tools", "examples", ".github/workflows"):
             for path in sorted((ROOT / directory).rglob("*")):
                 if path.is_file() and "__pycache__" not in path.parts:
                     archive.write(path, path.relative_to(ROOT).as_posix())
-        for name in ("README.md", "LICENSE", "hacs.json", "pyproject.toml", ".gitignore"):
+        for name in ("README.md", "AGENTS.md", "LICENSE", "hacs.json", "pyproject.toml", "requirements-dev.txt",
+                     "package.json", "package-lock.json", ".gitignore"):
             archive.write(ROOT / name, name)
     print(f"Built {source}")
 

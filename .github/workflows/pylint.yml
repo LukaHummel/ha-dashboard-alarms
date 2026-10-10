@@ -1,23 +1,51 @@
 name: Pylint
 
-on: [push]
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  build:
+  lint-and-test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.8", "3.9", "3.10"]
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: "3.14"
+        cache: pip
+        cache-dependency-path: requirements-dev.txt
     - name: Install dependencies
+      run: python -m pip install -r requirements-dev.txt
+    - name: Pylint
+      run: python -m pylint custom_components/dashboard_alarms tools
+    - name: Ruff
+      run: python -m ruff check custom_components tests tools
+    - name: Backend tests
+      run: python -m pytest -q
+    - name: Build and verify installation archive
       run: |
-        python -m pip install --upgrade pip
-        pip install pylint
-    - name: Analysing the code with pylint
-      run: |
-        pylint $(git ls-files '*.py')
+        python tools/build.py
+        python tools/verify_archive.py
+
+  browser-tests:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+        cache: npm
+    - name: Install browser test dependencies
+      run: npm ci
+    - name: Install Chromium
+      run: npx playwright install --with-deps chromium
+    - name: Card and global alarm dialog tests
+      run: npm test

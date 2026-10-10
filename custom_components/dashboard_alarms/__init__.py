@@ -3,13 +3,14 @@
 import logging
 from pathlib import Path
 
+from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.components.lovelace.const import LOVELACE_DATA
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP, Platform
 
 from .api import register
 from .audio import AudioHub
-from .const import CARD_URL, DOMAIN, STATIC_URL
+from .const import CARD_URL, DOMAIN, NOTIFICATIONS_URL, STATIC_URL
 from .manager import AlarmManager
 
 _LOGGER = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ async def async_setup(hass, config):
     await hass.http.async_register_static_paths([
         StaticPathConfig(STATIC_URL, str(Path(__file__).parent / "frontend"), False)
     ])
+    add_extra_js_url(hass, NOTIFICATIONS_URL)
     lovelace = hass.data.get(LOVELACE_DATA)
     if lovelace and lovelace.resource_mode == "storage":
         resources = lovelace.resources

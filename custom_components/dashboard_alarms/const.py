@@ -1,10 +1,11 @@
 """Constants for Dashboard Alarms."""
 
 DOMAIN = "dashboard_alarms"
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 PLATFORMS = ["calendar"]
 STATIC_URL = "/dashboard_alarms"
 CARD_URL = f"{STATIC_URL}/dashboard-alarms-card.js?v={VERSION}"
+NOTIFICATIONS_URL = f"{STATIC_URL}/dashboard-alarms-notifications.js?v={VERSION}"
 DEFAULT_SOUND = f"{STATIC_URL}/chime.wav"
 DEFAULTS = {
     "name": "Dashboard alarms",

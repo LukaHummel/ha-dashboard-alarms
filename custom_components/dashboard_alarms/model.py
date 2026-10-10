@@ -202,8 +202,21 @@ class AlarmCalendar:
         root = self.root(uid)
         if type(enabled) is not bool:
             raise ValueError("Enabled must be true or false.")
-        if enabled and not root.rrule and local_datetime(root.start, self.zone).timestamp() <= now.timestamp():
-            raise ValueError("Edit this one-time alarm to a future date before enabling it.")
+        if enabled and not root.rrule and root.status == EventStatus.TENTATIVE:
+            # Re-arm the saved local time for its next occurrence, keeping the UID,
+            # event duration, description, and audio overrides intact.
+            original = local_datetime(root.start, self.zone).replace(tzinfo=None)
+            duration = local_datetime(root.end, self.zone).replace(tzinfo=None) - original
+            day = now.astimezone(self.zone).date()
+            while True:
+                wall = datetime.combine(day, original.time())
+                when = valid_wall_time(wall.replace(tzinfo=self.zone), self.zone)
+                if when is not None and when.timestamp() > now.timestamp():
+                    break
+                day += timedelta(days=1)
+            root.dtstart = wall
+            root.dtend = wall + duration
+            root.summary = generated_name(when, None)
         # Apply to all exceptions belonging to the same series as well.
         for event in self.calendar.events:
             if event.uid == uid:

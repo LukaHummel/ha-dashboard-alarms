@@ -33,15 +33,48 @@ def test_weekday_next_and_generated_names():
     assert model.root(uid).rrule.as_rrule_str() == "FREQ=WEEKLY;BYDAY=MO,WE,FR"
 
 
-def test_once_future_and_reenable_validation():
+def test_once_creation_requires_future_time():
     model = AlarmCalendar(str(ZONE))
     with pytest.raises(ValueError, match="future"):
         model.create({"start": "2026-10-09T12:00:00"}, NOW)
-    uid = model.create({"start": "2026-10-11T12:00:00"}, NOW)
+
+
+@pytest.mark.parametrize(("now", "expected"), [
+    ("2026-10-13T07:00:00", "2026-10-13T12:00:00"),
+    ("2026-10-13T12:00:00", "2026-10-14T12:00:00"),
+    ("2026-10-13T18:00:00", "2026-10-14T12:00:00"),
+    ("2026-10-10T11:00:00", "2026-10-10T12:00:00"),
+])
+def test_once_reenable_uses_next_local_time_and_preserves_settings(now, expected):
+    model = AlarmCalendar(str(ZONE))
+    uid = model.create({"start": "2026-10-11T12:00:00", "end": "2026-10-11T12:20:00",
+                        "description": "Lunch", "audio": {"snooze_minutes": 7}}, NOW)
     model.set_enabled(uid, False, NOW)
-    with pytest.raises(ValueError, match="future"):
-        model.set_enabled(uid, True, NOW + timedelta(days=2))
-    assert model.next_occurrence(uid, NOW + timedelta(days=2)) is None
+    now = datetime.fromisoformat(now).replace(tzinfo=ZONE)
+    model.set_enabled(uid, True, now)
+    root = model.root(uid)
+    assert root.start.isoformat() == expected
+    assert root.end - root.start == timedelta(minutes=20)
+    assert metadata(root) == ("Lunch", {"snooze_minutes": 7})
+    assert model.next_occurrence(uid, now)[0].replace(tzinfo=None).isoformat() == expected
+    # Enabling an already-enabled alarm is idempotent.
+    model.set_enabled(uid, True, now + timedelta(hours=1))
+    assert root.start.isoformat() == expected
+
+
+def test_once_reenable_skips_dst_gap_and_already_passed_fold():
+    model = AlarmCalendar(str(ZONE))
+    before = datetime(2026, 3, 28, 1, tzinfo=ZONE)
+    uid = model.create({"start": "2026-03-28T02:30:00"}, before)
+    model.set_enabled(uid, False, before)
+    model.set_enabled(uid, True, datetime(2026, 3, 28, 12, tzinfo=ZONE))
+    assert model.root(uid).start == datetime(2026, 3, 30, 2, 30)
+    model.set_enabled(uid, False, before)
+    model.set_enabled(uid, True, datetime(2026, 10, 25, 2, 20, tzinfo=ZONE, fold=0))
+    assert model.root(uid).start == datetime(2026, 10, 25, 2, 30)
+    model.set_enabled(uid, False, before)
+    model.set_enabled(uid, True, datetime(2026, 10, 25, 2, 20, tzinfo=ZONE, fold=1))
+    assert model.root(uid).start == datetime(2026, 10, 26, 2, 30)
 
 
 @pytest.mark.parametrize("data", [

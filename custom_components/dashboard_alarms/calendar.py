@@ -44,7 +44,8 @@ class AlarmCalendarEntity(CalendarEntity):
         return next((event for event in self._cached_events if event.end.timestamp() > now), None)
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self):  # pylint: disable=invalid-overridden-method
+        # Home Assistant's base uses cached_property, which Pylint treats as a method.
         return {"dashboard_alarms": True, "alarm_count": len(self.manager.definitions)}
 
     async def async_added_to_hass(self):

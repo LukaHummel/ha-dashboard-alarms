@@ -3,8 +3,27 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py314"
 line-length = 120
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F"]
+
+[tool.pylint.main]
+py-version = "3.14"
+source-roots = ["."]
+persistent = false
+
+[tool.pylint.messages_control]
+# Ruff handles the shared style baseline. Keep Pylint errors and warnings,
+# except framework callback signatures and intentional exception boundaries.
+disable = [
+    "C",
+    "R",
+    "abstract-method",
+    "broad-exception-caught",
+    "unused-argument",
+]
+
+[tool.pylint.reports]
+score = false

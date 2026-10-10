@@ -1,4 +1,4 @@
-/* Dashboard Alarms 0.1.0 — local, dependency-free dashboard card. */
+/* Dashboard Alarms — local, dependency-free dashboard card. */
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, c =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -17,6 +17,7 @@ const style = `
   .top { display:flex; justify-content:space-between; align-items:center; gap:8px; } .time { font-size:30px; font-weight:600; line-height:1.2; }
   .name { font-size:16px; font-weight:600; margin:8px 0 4px; overflow-wrap:anywhere; } .detail { font-size:14px; line-height:1.5; color:var(--secondary-text-color,#62656a); overflow-wrap:anywhere; }
   .actions { display:flex; justify-content:center; align-items:center; gap:8px; margin-top:12px; } .actions button { flex:1; max-width:160px; }
+  .tile.ringing .actions button { min-height:72px; font-size:20px; max-width:none; }
   .switch { width:52px; min-width:52px; position:relative; background:transparent; padding:0; } .track { display:block; width:40px; height:24px; border-radius:14px; margin:auto; background:var(--disabled-color,#9a9da2); }
   .switch[aria-checked=true] .track { background:var(--primary-color,#3975a9); } .track:after { content:''; display:block; width:18px; height:18px; border-radius:50%; background:white; position:relative; top:3px; left:3px; transition:transform .15s; }
   .switch[aria-checked=true] .track:after { transform:translateX(16px); }

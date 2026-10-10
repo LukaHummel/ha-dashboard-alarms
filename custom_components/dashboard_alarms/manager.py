@@ -69,7 +69,7 @@ class AlarmManager:
                     if when.timestamp() > float(state.get("handled", 0)):
                         state.update(handled=when.timestamp(), last_missed=when.isoformat(), state="missed")
                         self.emit("missed", event.uid, occurrence=when.isoformat())
-            for uid, state in self.runtime["alarms"].items():
+            for state in self.runtime["alarms"].values():
                 if state.get("state") == "ringing":
                     state.update(state="missed", last_missed=state.get("ring_started"))
                 snooze = state.get("snooze_until")
@@ -164,7 +164,9 @@ class AlarmManager:
 
     async def action(self, action, uid, minutes=None):
         async with self.lock:
-            self.model.root(uid)
+            if self.closed:
+                raise HomeAssistantError("The alarm calendar is unloading. Retry shortly.")
+            root = self.model.root(uid)
             old_runtime = copy.deepcopy(self.runtime)
             state = self.runtime["alarms"].setdefault(uid, {})
             if action == "snooze":
@@ -180,6 +182,13 @@ class AlarmManager:
                 snooze_until = datetime.fromtimestamp(now.timestamp() + minutes * 60, now.tzinfo)
                 state.update(state="snoozed", snooze_until=snooze_until.isoformat())
             elif action == "dismiss":
+                if not root.rrule:
+                    candidate = await self.hass.async_add_executor_job(self.model.clone)
+                    candidate.set_enabled(uid, False, self.now())
+                    encoded = await self.hass.async_add_executor_job(candidate.serialize)
+                    # Disable durably before stopping this one-time occurrence.
+                    await self.store.async_save({"ics": encoded})
+                    self.model = candidate
                 state.update(state="dismissed")
                 state.pop("snooze_until", None)
             else:
@@ -187,8 +196,13 @@ class AlarmManager:
             try:
                 await self._save_runtime()
             except Exception:
-                self.runtime = old_runtime
-                raise
+                if action == "dismiss" and not root.rrule:
+                    # The disabled calendar is authoritative even if the second
+                    # store fails. Still stop audio and cancel pending callbacks.
+                    _LOGGER.exception("Alarm disabled, but dismissal history could not be saved")
+                else:
+                    self.runtime = old_runtime
+                    raise
             await self.audio.release(self.token(uid))
             await self._refresh()
             self.emit(action, uid)

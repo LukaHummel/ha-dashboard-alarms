@@ -48,6 +48,72 @@ async def test_fire_once_even_if_duplicate_callbacks_and_closed_dashboard(hass):
     assert [data["action"] for _, data in hass.events].count("fired") == 1
     await m.action("dismiss", uid)
     assert not m.audio.active
+    assert not m.definitions[0]["enabled"]
+    assert m.definitions[0]["state"] == "disabled"
+    await m.close()
+
+
+@pytest.mark.asyncio
+async def test_dismissed_once_stays_disabled_after_restart_and_can_be_rearmed(hass):
+    m = await manager(hass)
+    uid = (await m.mutate("create", data={"start": "2026-10-10T12:01:00"}))["uid"]
+    due = NOW + timedelta(minutes=1)
+    m.now = lambda: due
+    await m._fire(uid, due)
+    await m.action("snooze", uid)
+    assert m.definitions[0]["enabled"]
+    await m.action("dismiss", uid)
+    assert not m.definitions[0]["enabled"]
+    assert "snooze_until" not in m.runtime["alarms"][uid]
+    await m.close()
+    restored = await manager(hass, NOW + timedelta(minutes=5))
+    assert restored.definitions[0]["state"] == "disabled"
+    await restored.mutate("set_enabled", uid, {"enabled": True})
+    when = datetime(2026, 10, 11, 12, 1, tzinfo=ZONE)
+    assert restored.definitions[0]["next_occurrence"] == when.isoformat()
+    restored.now = lambda: when
+    await restored._fire(uid, when)
+    assert restored.audio.active
+    await restored.close()
+
+
+@pytest.mark.asyncio
+async def test_once_dismiss_calendar_save_failure_keeps_ringing(hass):
+    m = await manager(hass)
+    uid = (await m.mutate("create", data={"start": "2026-10-10T12:01:00"}))["uid"]
+    m.now = lambda: NOW + timedelta(minutes=1)
+    await m._fire(uid, m.now())
+    m.store.fail = True
+    with pytest.raises(OSError, match="disk full"):
+        await m.action("dismiss", uid)
+    assert m.definitions[0]["enabled"] and m.definitions[0]["state"] == "ringing"
+    assert m.audio.active
+    await m.close()
+
+
+@pytest.mark.asyncio
+async def test_once_dismiss_stops_audio_even_when_runtime_save_fails(hass):
+    m = await manager(hass)
+    uid = (await m.mutate("create", data={"start": "2026-10-10T12:01:00"}))["uid"]
+    m.now = lambda: NOW + timedelta(minutes=1)
+    await m._fire(uid, m.now())
+    m.runtime_store.fail = True
+    await m.action("dismiss", uid)
+    assert not m.audio.active
+    assert not m.definitions[0]["enabled"]
+    assert all(record["cancelled"] for record in hass.callbacks)
+    await m.close()
+
+
+@pytest.mark.asyncio
+async def test_dismiss_recurring_alarm_keeps_next_occurrence(hass):
+    m = await manager(hass)
+    uid = (await m.mutate("create", data={"start": "2026-10-10T12:01:00", "repeat": "daily"}))["uid"]
+    m.now = lambda: NOW + timedelta(minutes=1)
+    await m._fire(uid, m.now())
+    await m.action("dismiss", uid)
+    assert m.definitions[0]["enabled"]
+    assert m.definitions[0]["next_occurrence"].startswith("2026-10-11T12:01")
     await m.close()
 
 

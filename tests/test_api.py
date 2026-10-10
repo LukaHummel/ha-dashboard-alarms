@@ -96,6 +96,7 @@ async def test_list_requires_calendar_read_permission(hass):
     connection = Connection({("calendar.alarms", "read")})
     await ws_list(hass, connection, msg)
     assert connection.messages[0][2]["alarms"][0]["enabled"] is False
+    assert connection.messages[0][2]["can_control"] is False
 
 
 @pytest.mark.asyncio
@@ -125,6 +126,18 @@ async def test_live_subscription_rechecks_permission_and_unsubscribes(hass):
     assert len(connection.messages) == 2
     connection.subscriptions[4]()
     assert not manager.listeners
+
+
+@pytest.mark.asyncio
+async def test_subscription_reports_current_control_permission(hass):
+    manager = setup(hass)
+    allowed = {("calendar.alarms", "read"), ("calendar.alarms", "control")}
+    connection = Connection(allowed)
+    await ws_subscribe(hass, connection, {"id": 4, "entity_id": "calendar.alarms"})
+    assert connection.messages[-1][1]["event"]["can_control"] is True
+    allowed.remove(("calendar.alarms", "control"))
+    next(iter(manager.listeners))()
+    assert connection.messages[-1][1]["event"]["can_control"] is False
 
 
 @pytest.mark.asyncio

@@ -1,103 +1,121 @@
 # Dashboard Alarms
 
-A local Home Assistant alarm integration with its own calendar and touch-friendly dashboard card. Version 0.1.0 targets Home Assistant 2026.10 or newer.
+Local alarms for Home Assistant, with a calendar entity, a touch-friendly dashboard card, and large ringing controls across the Home Assistant interface. Create one-time, daily, or selected-weekday alarms; play a sound on media players; and snooze or dismiss from any open panel.
 
-No View Assist, Browser Mod, input helpers, separate Local Calendar integration, or external frontend resources are required.
+Requires **Home Assistant 2026.10.0 or newer**. The integration includes its card and a three-second chime. Alarms are scheduled by Home Assistant and continue to work when the dashboard is closed.
 
-## Install
+## Installation
 
-1. Extract the installation ZIP. Copy **`custom_components/dashboard_alarms`** into your Home Assistant **`/config/custom_components/`** directory. The final path must be `/config/custom_components/dashboard_alarms/manifest.json`.
-2. Restart Home Assistant.
-3. Open **Settings → Devices & services → Add integration → Dashboard Alarms**. Choose a calendar name, default media players, sound, snooze duration, and ring limit. The bundled chime is the default. More than one alarm calendar can be configured.
-4. Find the new calendar's entity ID in the integration's entities. Use that ID in the card below. It may differ from the example.
-5. Add a **Dashboard Alarms** card using the dashboard card picker. Storage-mode dashboard resources are registered automatically. Reload the browser after installation or an upgrade.
+### HACS
+
+Add [this repository](https://github.com/LukaHummel/ha-dashboard-alarms) to HACS as a custom repository with type **Integration**, then install **Dashboard Alarms**. It is not in the HACS default repository list.
+
+### Manual
+
+Download an installation ZIP or use the repository's `custom_components/dashboard_alarms` folder. Copy that folder into `/config/custom_components/`. The final path should be:
+
+```text
+/config/custom_components/dashboard_alarms/manifest.json
+```
+
+### Configure the integration and card
+
+1. Restart Home Assistant.
+2. Open **Settings → Devices & services → Add integration → Dashboard Alarms**.
+3. Choose a calendar name, default media players, sound, snooze duration, and maximum ringing duration. Leave the player list empty for an events-only setup. Multiple alarm calendars are supported.
+4. Find the calendar's entity ID in the integration's entities.
+5. Add **Dashboard Alarms** through the dashboard card picker, or use the YAML below with your calendar's entity ID. Reload the browser after installation or an upgrade.
 
 ```yaml
 type: custom:dashboard-alarms-card
 entity: calendar.dashboard_alarms
 title: Alarms
-# max_height: 600
+# max_height: 600  # Optional scrollable tile area height, in pixels
 ```
 
-For YAML-managed resources, merge this into your existing Lovelace resource configuration:
+The integration registers its card resource automatically for storage-mode dashboards. If the card is missing, add `/dashboard_alarms/dashboard-alarms-card.js?v=0.1.1` under **Settings → Dashboards → Resources** as a **JavaScript module**.
+
+For YAML-managed resources, merge this into your existing configuration:
 
 ```yaml
 lovelace:
   resources:
-    - url: /dashboard_alarms/dashboard-alarms-card.js?v=0.1.0
+    - url: /dashboard_alarms/dashboard-alarms-card.js?v=0.1.1
       type: module
 ```
 
-If automatic registration fails, add the same URL with type **JavaScript module** under **Settings → Dashboards → Resources**. Do not duplicate an existing resource or top-level YAML section.
+## Using alarms
 
-### HACS
+- **New alarm** opens the editor. Set a time, first date, and repeat pattern. Names are generated automatically.
+- The alarm's **switch** enables or disables its schedule. Disabling also ends ringing and cancels any snooze.
+- **Edit alarm** changes the schedule or deletes it after confirmation.
+- **Snooze** postpones the current ringing occurrence, defaulting to 10 minutes. **Dismiss** stops the occurrence or cancels a pending snooze. Recurring schedules stay enabled. A dismissed one-time alarm is automatically disabled; switching it on again schedules its saved time today if it is still ahead, otherwise tomorrow. Re-enabling a disabled one-time alarm uses this same next-time behavior even if its original date was further ahead.
 
-The source layout and `hacs.json` are prepared for an Integration custom repository. Add **https://github.com/LukaHummel/ha-dashboard-alarms** to HACS as type **Integration**, install, and follow steps 2–5. Private repositories require access through your HACS GitHub account and may need manual installation if unavailable in HACS. This project is not submitted to the HACS default list.
+Ringing opens a large dialog with **Snooze** and **Dismiss** buttons. The dialog is loaded globally, so it works on other dashboards and settings panels even when no alarm card is mounted or the card is scrolled out of view. It shows all currently ringing alarm calendars you can control and closes as they are snoozed, dismissed, or timed out. The browser or companion app must be open and connected for these controls; backend audio continues with the interface closed. Reload open clients after upgrading.
 
-## Use
+Times use Home Assistant's timezone and its 12/24-hour display preference. For recurring alarms, the first date is the earliest permitted date and may be in the past. During daylight saving transitions, nonexistent times are skipped and repeated times fire once at their first occurrence.
 
-Tap **New alarm**, adjust the hour/minute using the large buttons, select the first date, choose **Once**, **Daily**, or **Selected weekdays**, and save. Names are generated automatically. The editor closes after successful saving and stays open on failure.
+The bundled chime repeats every three seconds until snoozed, dismissed, or timed out. The default ring limit is 10 minutes. Sound, players, snooze duration, and ring limit can be overridden per alarm.
 
-An alarm's switch enables or disables it while retaining its calendar event and settings. Editing and deleting are available through **Edit alarm**. Deletion asks for confirmation and removes the complete schedule. Disable also ends active ringing and cancels snooze. A completed one-time alarm must be edited to a future date before it can be re-enabled.
+After a restart, missed occurrences are recorded without playing them. Future snoozes survive restarts; interrupted ringing is marked missed. The card shows the latest missed occurrence for each alarm.
 
-The selected date is the earliest permitted date for recurring alarms. A past first date is allowed for repeats. Scheduling uses Home Assistant's timezone, regardless of the browser timezone, and the card follows Home Assistant's 12/24-hour preference. A nonexistent spring-transition time is skipped; an ambiguous autumn-transition time fires once at its first occurrence.
+## Sound and troubleshooting
 
-Ringing alarms expose **Snooze** and **Dismiss**. Snooze defaults to 10 minutes; it does not change the recurring schedule. Dismiss ends the current occurrence, or cancels a pending snooze. The next recurring alarm remains scheduled. The chime repeats every 15 seconds until acted on or until the ring limit (10 minutes by default).
+Media players must support `play_media` and `media_stop`, and must be able to reach Home Assistant to fetch local audio. Set a reachable internal URL under **Settings → System → Network** if the bundled chime cannot be fetched.
 
-The backend schedules alarms with the dashboard closed. After a restart it records missed occurrences without sounding them and schedules the next repeat. Future snoozes survive restarts; interrupted ringing is marked missed rather than replayed. The card shows the latest missed occurrence per alarm, including after extended downtime.
+Sounds can be local paths, HTTP(S) URLs, or media-source URIs. Custom clips replay when the player reports completion or the clip's reported duration elapses. Players that expose neither use a 15-second fallback; prefer the bundled chime or a player that reports playback state/duration. Network and device buffering can still add a small gap. Player volume is left unchanged, and previously playing music is not restored.
 
-### Sound
+When alarms share a player, the most recently started alarm supplies the sound. Dismissing one alarm leaves the others ringing. A playback failure is shown in the card and emitted as an event; working targets continue.
 
-Use media players that support `play_media` and `media_stop`. The players must be able to reach Home Assistant's configured local URL to fetch the bundled chime or another local sound. Configure the internal Home Assistant URL under Network settings if URL discovery cannot resolve a reachable address. URLs/media-source URIs can be selected globally or overridden in each alarm's editor.
+| Symptom | Check |
+| --- | --- |
+| Card type is unknown | Check the module resource above, then reload the browser. |
+| Calendar cannot be selected | Use the entity ID belonging to a Dashboard Alarms integration instance. |
+| Alarm fires without sound | Check its player overrides, player availability, and access to the audio URL. An empty player list emits events only. |
+| Ringing dialog is missing | Reload the open Home Assistant client after installing or upgrading, and check its connection. |
 
-The integration leaves player volume unchanged. It does not restore previously playing music. A repeat starts the selected sound again every 15 seconds, so choose a short clip. If multiple alarms share a player, one playback loop plays the most recently started alarm's sound; dismissing one does not stop remaining alarms. Target-specific playback failures are shown in the card and emitted as events; other targets continue.
+## Calendar and storage
 
-Leaving the default player list empty creates an events-only setup. Per-alarm overrides can explicitly select an empty list as well. Configure separate automations for lights or notifications if desired.
+Each integration instance owns a standard Home Assistant calendar. Enabled events are `confirmed`; disabled events are `tentative` and remain visible. The calendar entity's `on`/`off` state describes an active event, not whether an alarm is enabled. Standard calendar triggers can observe disabled events; use the lifecycle events below for alarm automations.
 
-## Calendar behavior and storage
+Native calendar editing supports timed events with once, daily, and selected-weekday patterns, including bounded `COUNT`/`UNTIL` rules. All-day events, monthly/yearly repeats, ordinal weekdays, and intervals other than 1 are rejected. Native instance and this-and-future edits use iCalendar exceptions. The card edits the complete schedule and saves recurring patterns without an end date.
 
-The integration owns a standard Home Assistant calendar entity. Alarm definitions are authoritative iCalendar events with stable UIDs. Storage is local, through Home Assistant storage helpers, and is included in normal configuration backups. It does not access another integration's private storage.
+Audio overrides are stored in the reserved `[dashboard_alarms:v1]` description block. Leave that block intact when editing events manually; ordinary description text is retained.
 
-Enabled events use `confirmed`; disabled events use `tentative`, and remain visible in the standard calendar. These statuses are set by the alarm API. The calendar's `on`/`off` state means that an event is currently active, not that an alarm is enabled. Standard calendar triggers can observe disabled/tentative events too; use the integration's lifecycle events when building alarm automations.
+Schedules, occurrence history, and snooze state are stored locally and included in Home Assistant configuration backups. Reloading preserves them. Removing an integration instance deletes its stores.
 
-Native calendar creation/editing supports timed events and the same once/daily/selected-weekday recurrence patterns. New events use default audio settings and generated names. All-day events, monthly/yearly patterns, ordinal weekdays, and intervals other than 1 are rejected. Bounded daily/weekly `COUNT`/`UNTIL` rules are accepted through calendar editing. The card uses unbounded repeats when saving a recurring schedule.
+## Automations
 
-Alarm-specific audio settings are stored in a versioned metadata block in the event description; user description text is retained. Do not manually change the reserved `[dashboard_alarms:v1]` block. Calendar instance edits/deletions and this-and-future changes use iCalendar exceptions. The card edits a full schedule, and shows a hint when exceptions exist.
+All services accept the alarm calendar's `entity_id`. Services other than `create_alarm` also require an alarm `uid`.
 
-Runtime occurrence history and snooze state are stored separately from schedule events. Disabling, editing, or deleting invalidates pending callbacks. Occurrences are recorded before audio playback to prevent duplicate execution. Unloading/reloading preserves both stores; explicitly removing an integration instance deletes its stores.
+| Service | Additional data |
+| --- | --- |
+| `dashboard_alarms.create_alarm` | `alarm` definition; optionally returns its UID |
+| `dashboard_alarms.update_alarm` | `alarm` with the complete definition |
+| `dashboard_alarms.set_enabled` | `alarm: {enabled: true}` or `false` |
+| `dashboard_alarms.delete_alarm` | No additional data |
+| `dashboard_alarms.snooze` | Optional `minutes` |
+| `dashboard_alarms.dismiss` | No additional data |
 
-## Automation API
-
-Services are `dashboard_alarms.create_alarm`, `update_alarm`, `set_enabled`, `delete_alarm`, `snooze`, and `dismiss`. Each accepts `entity_id` for the alarm calendar. All except create also require `uid`. Create/update take an `alarm` object; update supplies a complete definition. Responses optionally return the UID.
+Example creation:
 
 ```yaml
 action: dashboard_alarms.create_alarm
 data:
   entity_id: calendar.dashboard_alarms
   alarm:
-    start: '2026-10-12T07:00:00' # Floating local time in Home Assistant's timezone
+    start: '2026-10-12T07:00:00'  # Local time in Home Assistant's timezone
     repeat: weekdays           # once | daily | weekdays
     weekdays: [0, 2, 4]         # Monday=0, Sunday=6
     enabled: true
     description: Breakfast
-    audio: {}                  # Empty uses integration defaults
+    audio: {}                  # Use integration defaults
 response_variable: alarm
 ```
 
-Choose a future date if using `repeat: once`. Optional `audio` keys are `media_players` (list), `sound` (URL/path/media-source URI), `snooze_minutes`, and `ring_minutes` (whole numbers 1–120). Omitted keys inherit defaults.
+Set `start` to your desired date; one-time alarms require a future time. Optional `audio` keys are `media_players` (list), `sound` (path/URL/media-source URI), `snooze_minutes`, and `ring_minutes` (whole numbers 1–120). Omitted keys inherit defaults; an explicit empty player list selects events-only operation.
 
-```yaml
-action: dashboard_alarms.set_enabled
-data:
-  entity_id: calendar.dashboard_alarms
-  uid: 'UID returned by create or list'
-  alarm:
-    enabled: false
-```
-
-`snooze` optionally accepts `minutes`. `dismiss` and `delete_alarm` need only calendar ID and UID.
-
-Lifecycle events use event type **`dashboard_alarms_event`**. Data includes `action`, `entity_id`, `uid`, and action-specific details. Actions include create, update, set_enabled, delete, fired, missed, snooze, dismiss, timed_out, and audio_error. The fired event includes `occurrence` and `snoozed`.
+Lifecycle events use type **`dashboard_alarms_event`**, with `action`, `entity_id`, `uid`, and action-specific details. Actions are `create`, `update`, `set_enabled`, `delete`, `fired`, `missed`, `snooze`, `dismiss`, `timed_out`, and `audio_error`. A `fired` event also includes `occurrence` and `snoozed`.
 
 ```yaml
 triggers:
@@ -113,27 +131,39 @@ actions:
 mode: parallel
 ```
 
-The authenticated WebSocket commands are `dashboard_alarms/list`, `/subscribe`, and `/command`. All take `entity_id`; command takes a service-name `command` plus optional `uid`, `alarm`, and `minutes`. List and subscribe return `entity_id`, `time_zone`, `defaults`, and all alarm definitions, including disabled/completed alarms. Read/control entity permissions apply to WebSocket calls and user-originated services.
+Authenticated WebSocket commands are `dashboard_alarms/list`, `dashboard_alarms/subscribe`, and `dashboard_alarms/command`. All require `entity_id`. Command additionally takes a service-name `command` and optional `uid`, `alarm`, and `minutes`. List and subscription updates include `entity_id`, `time_zone`, `defaults`, `can_control`, and all alarm definitions. Entity permissions apply to user-originated calls.
 
-## Cutover from the old View Assist setup
+## Development
 
-This version starts fresh and does not import or delete View Assist alarms. Before recreating alarms here, disable the old **Dashboard – repeat View Assist alarms** automation and cancel its pending alarms. Replace the old dashboard card with this card. The old package and its draft helpers can then be removed if nothing else uses them. View Assist itself can remain installed for other functions.
+Use **Python 3.14.2 or newer**, matching the supported Home Assistant release. A Linux virtual environment is recommended for installing Home Assistant's dependencies. From the repository root:
 
-## Validation
+```sh
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements-dev.txt
+python -m pylint custom_components/dashboard_alarms tools
+python -m ruff check custom_components tests tools
+python -m pytest -q
+python tools/build.py
+python tools/verify_archive.py
+```
 
-Backend tests use the real `ical` parser/event store and lightweight Home Assistant adapter fakes. They cover calendar persistence, recurrence and exceptions, DST, scheduling races, restart recovery, save failures, snooze, timeout, and shared-player ownership. Browser tests exercise the actual card in Chromium with a mocked API, including save errors, toggles, duplicate submission, reconnects, and responsive layouts. These are not a full Home Assistant integration-load test or a real-speaker test.
+On Windows, activate with `.venv\Scripts\Activate.ps1`. The build tools themselves only need Python 3.12 or newer and the standard library.
 
-Before relying on this first release, test on your Home Assistant instance:
+Pylint checks integration and build code, with project-specific settings in `pyproject.toml`. Ruff checks integration, tools, and tests. Backend tests use the real `ical` parser and Home Assistant adapter fakes.
 
-1. Create a one-time alarm two minutes ahead, close the dashboard, and verify sound.
-2. Snooze it, verify it rings again, and dismiss it.
-3. Create a recurring alarm, disable it, restart Home Assistant, and verify the saved disabled tile remains. Enable it and confirm its next occurrence.
-4. Schedule two alarms sharing a player; dismiss one and verify the other continues.
-5. Test a missing player and verify the error appears while a working target still rings.
-6. Inspect the standard calendar, create/edit a timed event there, and verify the card updates.
+For the card and global ringing dialog tests, install Node.js 22 or newer and the pinned Playwright dependency:
 
-### Development
+```sh
+npm ci
+npx playwright install chromium
+npm test
+```
 
-Install `ical==14.1.1`, `probatio`, `pytest`, `pytest-asyncio`, and `ruff` into a Python environment. Run `pytest` and `ruff check custom_components tests tools`. Browser tests require Node.js and Playwright with Chromium. Run `node tests/card.spec.cjs`; optionally set `PLAYWRIGHT_MODULE` to an installed Playwright module path. Build the archive with `python tools/build.py`.
+Browser tests exercise the card and global dialog in Chromium with a mocked Home Assistant API, including controls without a mounted card, multiple calendars, reconnects, failures, and mobile layout. Neither suite replaces testing integration loading and audio on a real Home Assistant instance. Before relying on alarms, verify a one-time alarm with another panel open, snooze/dismiss, re-enabling, restart recovery, and your chosen players.
 
-The repository contains no live Home Assistant credentials. The archive includes only the integration, its assets, documentation, example card, license, and HACS metadata.
+Build outputs are written to `outputs/`: an installation ZIP, a source ZIP, and a copy of this README. Contributor guidance is in [AGENTS.md](https://github.com/LukaHummel/ha-dashboard-alarms/blob/main/AGENTS.md).
+
+## License
+
+[Apache License 2.0](LICENSE).

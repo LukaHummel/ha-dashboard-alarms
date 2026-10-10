@@ -1,0 +1,12 @@
+{
+  "name": "ha-dashboard-alarms",
+  "version": "0.1.1",
+  "private": true,
+  "scripts": {
+    "test": "node tests/card.spec.cjs && node tests/notifications.spec.cjs",
+    "preview:alarms": "node tests/notifications-fixture.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.64.0"
+  }
+}

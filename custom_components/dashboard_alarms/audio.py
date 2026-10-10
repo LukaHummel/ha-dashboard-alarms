@@ -9,7 +9,11 @@ from homeassistant.components.media_player import async_process_play_media_url
 from homeassistant.components.media_source import async_resolve_media
 from homeassistant.helpers.network import get_url
 
+from .const import DEFAULT_SOUND
+
 _LOGGER = logging.getLogger(__name__)
+DEFAULT_SOUND_SECONDS = 3
+UNKNOWN_SOUND_SECONDS = 15
 
 
 class AudioHub:
@@ -32,36 +36,64 @@ class AudioHub:
                     )
 
     async def _loop(self, target):
-        try:
-            while target in self.owners:
-                # Most recently ringing alarm supplies the sound for shared targets.
-                owners = list(self.owners[target].values())
-                sound = owners[-1][0]
-                try:
-                    state = self.hass.states.get(target)
-                    if state is None or state.state in ("unknown", "unavailable"):
-                        raise ValueError(f"{target} is unavailable")
-                    if sound.startswith("media-source://"):
-                        media = await async_resolve_media(self.hass, sound, target)
-                        url, media_type = async_process_play_media_url(self.hass, media.url), media.mime_type
+        while target in self.owners:
+            # Most recently ringing alarm supplies the sound for shared targets.
+            owners = list(self.owners[target].values())
+            sound = owners[-1][0]
+            try:
+                state = self.hass.states.get(target)
+                if state is None or state.state in ("unknown", "unavailable"):
+                    raise ValueError(f"{target} is unavailable")
+                if sound.startswith("media-source://"):
+                    media = await async_resolve_media(self.hass, sound, target)
+                    url, media_type = async_process_play_media_url(self.hass, media.url), media.mime_type
+                else:
+                    if sound.startswith("/dashboard_alarms/"):
+                        url = get_url(self.hass, prefer_external=False) + sound
                     else:
-                        if sound.startswith("/dashboard_alarms/"):
-                            url = get_url(self.hass, prefer_external=False) + sound
-                        else:
-                            url = async_process_play_media_url(self.hass, sound)
-                        media_type = mimetypes.guess_type(urlsplit(sound).path)[0] or "music"
-                    await asyncio.wait_for(self.hass.services.async_call(
-                        "media_player", "play_media",
-                        {"entity_id": target, "media_content_id": url, "media_content_type": media_type},
-                        blocking=True,
-                    ), timeout=12)
-                except Exception as err:  # Device integrations may raise arbitrary errors.
-                    _LOGGER.warning("Alarm playback failed on %s: %s", target, err)
-                    for _, on_error in owners:
-                        on_error(f"{target}: {err}")
-                await asyncio.sleep(15)
-        except asyncio.CancelledError:
-            raise
+                        url = async_process_play_media_url(self.hass, sound)
+                    media_type = mimetypes.guess_type(urlsplit(sound).path)[0] or "music"
+                await asyncio.wait_for(self.hass.services.async_call(
+                    "media_player", "play_media",
+                    {"entity_id": target, "media_content_id": url, "media_content_type": media_type},
+                    blocking=True,
+                ), timeout=12)
+                await self._wait_for_sound(target, sound)
+            except Exception as err:  # Device integrations may raise arbitrary errors.
+                _LOGGER.warning("Alarm playback failed on %s: %s", target, err)
+                for _, on_error in owners:
+                    on_error(f"{target}: {err}")
+                await asyncio.sleep(5)
+
+    async def _wait_for_sound(self, target, sound):
+        """Replay when the clip finishes, without restarting long audio early."""
+        if sound.split("?", 1)[0] == DEFAULT_SOUND:
+            await asyncio.sleep(DEFAULT_SOUND_SECONDS)
+            return
+        # Give the player a chance to publish the newly loaded clip's metadata.
+        await asyncio.sleep(1)
+        elapsed = 1.0
+        playing = False
+        duration = None
+        while target in self.owners:
+            # A new/shared owner may have supplied a different sound.
+            if list(self.owners[target].values())[-1][0] != sound:
+                return
+            state = self.hass.states.get(target)
+            if state is None or state.state in ("unknown", "unavailable"):
+                return
+            if state.state == "playing":
+                playing = True
+            elif playing and state.state in ("idle", "off", "paused"):
+                return
+            reported = getattr(state, "attributes", {}).get("media_duration")
+            if isinstance(reported, (int, float)) and 0 < reported < 86400:
+                duration = reported
+            if elapsed >= (duration or UNKNOWN_SOUND_SECONDS):
+                return
+            delay = min(0.5, (duration or UNKNOWN_SOUND_SECONDS) - elapsed)
+            await asyncio.sleep(delay)
+            elapsed += delay
 
     async def release(self, token):
         stops = []
