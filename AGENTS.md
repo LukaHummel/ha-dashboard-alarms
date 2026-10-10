@@ -15,6 +15,10 @@ Dashboard Alarms is a local Home Assistant custom integration with a bundled das
 - `tests/`: backend tests with Home Assistant adapter fakes and a separate Chromium card test.
 - `tools/build.py`: generates translation/service metadata and the chime, then creates installation and source ZIPs under `outputs/`.
 - `tools/verify_archive.py`: validates the installation ZIP.
+- `tools/verify_release.py`: checks synchronized versions, README resources, and the current release notes; accepts `--tag vX.Y.Z` for release validation.
+- `.github/workflows/pylint.yml`: shared validation for PRs, main, and the tag-triggered release workflow.
+- `.github/workflows/release.yml`: publishes only after all shared checks pass; attaches the verified manual installation ZIP.
+- `brand/icon.svg` inside the integration: editable source for the bundled `brand/icon.png`.
 
 ## Development and validation
 
@@ -25,6 +29,7 @@ python -m pip install -r requirements-dev.txt
 python -m pylint custom_components/dashboard_alarms tools
 python -m ruff check custom_components tests tools
 python -m pytest -q
+python tools/verify_release.py
 python tools/build.py
 python tools/verify_archive.py
 ```
@@ -54,4 +59,8 @@ Keep the README focused on current installation, use, APIs, and development. Avo
 
 When changing generated strings, services, or the chime, edit `tools/build.py` and regenerate the checked-in assets. Check the resulting diff. Keep version references in `const.py`, `manifest.json`, `package.json`/its lockfile, and resource examples consistent when releasing; archive filenames derive from the manifest. Keep the minimum Home Assistant version in `hacs.json`, `requirements-dev.txt`, and documentation consistent.
 
+The manifest uses `ical>=14.3.0` because Home Assistant also depends on this package; an exact integration pin would conflict with future core updates. Development requirements pin the tested version for reproducibility. Keep hassfest passing when changing dependencies.
+
 Do not commit virtual environments, dependency folders, release ZIPs, caches, or credentials. Include a focused regression test when changing scheduling, persistence, permissions, or ownership behavior.
+
+Releases use stable `X.Y.Z` versions and `vX.Y.Z` tags on commits merged into `main`. Replace `release-notes.md` for each release rather than accumulating project history. Keep generated assets committed because HACS installs the tagged source directory. Run shared validation before publishing; only the release publishing job needs write permissions. Do not move published tags or replace published releases with different code.

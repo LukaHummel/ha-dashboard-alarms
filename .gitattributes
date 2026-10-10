@@ -1,0 +1,4 @@
+# Generated metadata must match the builder on Windows and Linux.
+custom_components/dashboard_alarms/strings.json text eol=lf
+custom_components/dashboard_alarms/services.yaml text eol=lf
+custom_components/dashboard_alarms/translations/*.json text eol=lf

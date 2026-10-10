@@ -17,7 +17,7 @@ with zipfile.ZipFile(path) as archive:
     prefix = "custom_components/dashboard_alarms/"
     for name in ("manifest.json", "config_flow.py", "calendar.py", "api.py", "model.py", "manager.py", "audio.py",
                  "frontend/dashboard-alarms-card.js", "frontend/dashboard-alarms-notifications.js", "frontend/chime.wav",
-                 "translations/en.json", "services.yaml"):
+                 "brand/icon.png", "translations/en.json", "services.yaml"):
         assert prefix + name in names, name
     for name in names:
         if name.endswith(".py"):

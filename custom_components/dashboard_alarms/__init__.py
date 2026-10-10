@@ -7,6 +7,7 @@ from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.components.lovelace.const import LOVELACE_DATA
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP, Platform
+from homeassistant.helpers import config_validation as cv
 
 from .api import register
 from .audio import AudioHub
@@ -14,6 +15,7 @@ from .const import CARD_URL, DOMAIN, NOTIFICATIONS_URL, STATIC_URL
 from .manager import AlarmManager
 
 _LOGGER = logging.getLogger(__name__)
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass, config):

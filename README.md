@@ -12,7 +12,7 @@ Add [this repository](https://github.com/LukaHummel/ha-dashboard-alarms) to HACS
 
 ### Manual
 
-Download an installation ZIP or use the repository's `custom_components/dashboard_alarms` folder. Copy that folder into `/config/custom_components/`. The final path should be:
+Download `dashboard-alarms-X.Y.Z.zip` from [GitHub Releases](https://github.com/LukaHummel/ha-dashboard-alarms/releases) or use the repository's `custom_components/dashboard_alarms` folder. Copy that folder into `/config/custom_components/`. The final path should be:
 
 ```text
 /config/custom_components/dashboard_alarms/manifest.json
@@ -144,6 +144,7 @@ python -m pip install -r requirements-dev.txt
 python -m pylint custom_components/dashboard_alarms tools
 python -m ruff check custom_components tests tools
 python -m pytest -q
+python tools/verify_release.py
 python tools/build.py
 python tools/verify_archive.py
 ```
@@ -163,6 +164,26 @@ npm test
 Browser tests exercise the card and global dialog in Chromium with a mocked Home Assistant API, including controls without a mounted card, multiple calendars, reconnects, failures, and mobile layout. Neither suite replaces testing integration loading and audio on a real Home Assistant instance. Before relying on alarms, verify a one-time alarm with another panel open, snooze/dismiss, re-enabling, restart recovery, and your chosen players.
 
 Build outputs are written to `outputs/`: an installation ZIP, a source ZIP, and a copy of this README. Contributor guidance is in [AGENTS.md](https://github.com/LukaHummel/ha-dashboard-alarms/blob/main/AGENTS.md).
+
+## Releasing
+
+Release versions use `X.Y.Z`, with Git tags named `vX.Y.Z`. HACS installs the files from the tagged integration directory; the attached ZIP is for manual installation. The card and ringing dialog ship with the integration, so they do not need separate releases.
+
+1. Open a release PR updating `manifest.json`, `const.py`, `package.json`, the root package versions in `package-lock.json`, and the card resource versions in this README. `npm version X.Y.Z --no-git-tag-version` updates the npm files.
+2. Replace [release-notes.md](release-notes.md) with notes for this version, starting with `# X.Y.Z`. Describe user-facing changes, minimum Home Assistant version, and any upgrade steps. This file holds only the current release; published GitHub releases retain earlier notes.
+3. Run `python tools/verify_release.py`, `python tools/build.py`, and `python tools/verify_archive.py`. Commit any regenerated integration assets. Merge after the **Validation** workflow passes its Python, Chromium, hassfest, and HACS checks.
+4. Tag the merged commit and push the tag. For the first release, whose manifest version is `0.1.1`:
+
+   ```sh
+   git switch main
+   git pull --ff-only
+   git tag -a v0.1.1 -m "Dashboard Alarms 0.1.1"
+   git push origin v0.1.1
+   ```
+
+The **Release** workflow reruns the shared validation against the tag. It rejects mismatched versions, missing release notes, generated assets that differ from the committed files, and commits not merged into `main`. After all checks pass, it publishes a GitHub release and attaches the verified installation ZIP. It uses the built-in `GITHUB_TOKEN`; no additional secret is needed. HACS offers published versions, with the default branch hidden.
+
+If a run fails before publishing, fix transient problems and rerun it from GitHub Actions. Code or metadata fixes require a new commit and tag; keep published tags unchanged. Use a new patch version for fixes to a published release. Do not create a release manually before its checks finish.
 
 ## License
 

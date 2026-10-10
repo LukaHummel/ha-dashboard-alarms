@@ -1,4 +1,4 @@
-"""Generate metadata/chime and package a self-contained manual/HACS installation.
+"""Generate metadata/chime and package a self-contained manual installation.
 
 Run with Python 3.12+; no third-party build dependencies.
 """
@@ -18,7 +18,7 @@ VERSION = json.loads((COMPONENT / "manifest.json").read_text(encoding="utf-8"))[
 
 def write_json(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
 def metadata():
@@ -97,8 +97,8 @@ def package():
             for path in sorted((ROOT / directory).rglob("*")):
                 if path.is_file() and "__pycache__" not in path.parts:
                     archive.write(path, path.relative_to(ROOT).as_posix())
-        for name in ("README.md", "AGENTS.md", "LICENSE", "hacs.json", "pyproject.toml", "requirements-dev.txt",
-                     "package.json", "package-lock.json", ".gitignore"):
+        for name in ("README.md", "AGENTS.md", "release-notes.md", "LICENSE", "hacs.json", "pyproject.toml", "requirements-dev.txt",
+                     "package.json", "package-lock.json", ".gitignore", ".gitattributes"):
             archive.write(ROOT / name, name)
     print(f"Built {source}")
 

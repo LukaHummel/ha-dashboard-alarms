@@ -27,6 +27,7 @@ async def test_setup_registers_global_module_without_lovelace_resources(hass, mo
     adapter("homeassistant.components.frontend", add_extra_js_url=lambda _, url: urls.append(url))
     adapter("homeassistant.components.http", StaticPathConfig=lambda *args: args)
     adapter("homeassistant.components.lovelace.const", LOVELACE_DATA="lovelace")
+    adapter("homeassistant.helpers.config_validation", config_entry_only_config_schema=lambda domain: domain)
     monkeypatch.setattr(sys.modules["homeassistant.const"], "EVENT_HOMEASSISTANT_STOP", "stop", raising=False)
     monkeypatch.setattr(sys.modules["homeassistant.const"], "Platform", SimpleNamespace(CALENDAR="calendar"), raising=False)
     path = Path(__file__).resolve().parents[1] / "custom_components/dashboard_alarms/__init__.py"
@@ -34,6 +35,7 @@ async def test_setup_registers_global_module_without_lovelace_resources(hass, mo
     # Load the actual integration entry point with normal relative imports.
     module = module_from_spec(spec_from_loader(loader.name, loader, is_package=False))
     loader.exec_module(module)
+    assert module.CONFIG_SCHEMA == "dashboard_alarms"
     assert module.register is register
     monkeypatch.setattr(module, "register", lambda _: None)
 

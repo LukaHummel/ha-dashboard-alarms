@@ -1,7 +1,7 @@
 # Match the minimum supported Home Assistant release and its schema library.
 homeassistant==2026.10.0
 probatio==0.13.0
-ical==14.1.1
+ical==14.3.0
 
 pylint==4.0.2
 pytest==9.1.1
