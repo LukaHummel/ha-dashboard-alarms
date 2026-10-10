@@ -3,10 +3,13 @@
   "version": "0.1.1",
   "private": true,
   "scripts": {
+    "lint:commits": "commitlint",
     "test": "node tests/card.spec.cjs && node tests/notifications.spec.cjs",
     "preview:alarms": "node tests/notifications-fixture.cjs"
   },
   "devDependencies": {
+    "@commitlint/cli": "21.2.3",
+    "@commitlint/config-conventional": "21.2.3",
     "playwright": "1.64.0"
   }
 }

@@ -1,0 +1,70 @@
+name: Publish release
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Draft release tag to validate and publish
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Draft release tag to validate and publish
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: publish-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    uses: ./.github/workflows/pylint.yml
+    with:
+      ref: ${{ inputs.tag }}
+      release-tag: ${{ inputs.tag }}
+      upload-archive: true
+
+  publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.tag }}
+        fetch-depth: 0
+        persist-credentials: false
+    - name: Require a commit merged into main
+      run: git merge-base --is-ancestor HEAD origin/main
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.14"
+    - name: Check release version
+      id: metadata
+      env:
+        RELEASE_TAG: ${{ inputs.tag }}
+      run: python tools/verify_release.py --tag "$RELEASE_TAG" --github-output "$GITHUB_OUTPUT"
+    - uses: actions/download-artifact@v4
+      with:
+        name: installation-archive
+        path: outputs
+    - name: Verify downloaded installation archive
+      run: python tools/verify_archive.py
+    - name: Publish the validated draft
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+        RELEASE_TAG: ${{ inputs.tag }}
+        RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
+      run: |
+        test "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" = true
+        gh release upload "$RELEASE_TAG" "outputs/dashboard-alarms-${RELEASE_VERSION}.zip" --clobber
+        gh release edit "$RELEASE_TAG" --draft=false --latest

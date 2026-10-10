@@ -15,9 +15,14 @@ Dashboard Alarms is a local Home Assistant custom integration with a bundled das
 - `tests/`: backend tests with Home Assistant adapter fakes and a separate Chromium card test.
 - `tools/build.py`: generates translation/service metadata and the chime, then creates installation and source ZIPs under `outputs/`.
 - `tools/verify_archive.py`: validates the installation ZIP.
-- `tools/verify_release.py`: checks synchronized versions, README resources, and the current release notes; accepts `--tag vX.Y.Z` for release validation.
-- `.github/workflows/pylint.yml`: shared validation for PRs, main, and the tag-triggered release workflow.
-- `.github/workflows/release.yml`: publishes only after all shared checks pass; attaches the verified manual installation ZIP.
+- `tools/verify_release.py`: checks synchronized versions, README resources, and the newest changelog entry; accepts `--tag vX.Y.Z` for release validation.
+- `tools/verify_hacs.py`: offline HACS layout, manifest, documentation, and brand checks.
+- `.github/workflows/pylint.yml`: shared validation for PRs, main, and exact release tags.
+- `.github/workflows/release.yml`: Release Please creates release PRs and draft releases after main validation, and explicitly dispatches release PR validation with the built-in token.
+- `.github/workflows/publish-release.yml`: validates the exact draft release tag, uploads the verified manual ZIP, and publishes only after success; supports manual retry by tag.
+- `release-please-config.json` and `.release-please-manifest.json`: release strategy and current version. The node strategy manages npm files; additional updaters manage the integration and README versions.
+- `.github/HACS_SUBMISSION.md`: current HACS default-list requirements and submission evidence.
+- `.commitlintrc.cjs`: Conventional Commit rules shared by local checks and CI.
 - `brand/icon.svg` inside the integration: editable source for the bundled `brand/icon.png`.
 
 ## Development and validation
@@ -30,6 +35,7 @@ python -m pylint custom_components/dashboard_alarms tools
 python -m ruff check custom_components tests tools
 python -m pytest -q
 python tools/verify_release.py
+python tools/verify_hacs.py
 python tools/build.py
 python tools/verify_archive.py
 ```
@@ -63,4 +69,10 @@ The manifest uses `ical>=14.3.0` because Home Assistant also depends on this pac
 
 Do not commit virtual environments, dependency folders, release ZIPs, caches, or credentials. Include a focused regression test when changing scheduling, persistence, permissions, or ownership behavior.
 
-Releases use stable `X.Y.Z` versions and `vX.Y.Z` tags on commits merged into `main`. Replace `release-notes.md` for each release rather than accumulating project history. Keep generated assets committed because HACS installs the tagged source directory. Run shared validation before publishing; only the release publishing job needs write permissions. Do not move published tags or replace published releases with different code.
+Every authored commit and PR title must follow Conventional Commits: `type(optional-scope): description`, with an optional `!` before the colon for a breaking change. Allowed types are `build`, `chore`, `ci`, `deps`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, and `test`. Examples: `fix(audio): reduce playback gaps`, `feat: add alarm controls`, and `feat(api)!: change the alarm API`. A `BREAKING CHANGE:` footer is also accepted. Use a blank line before the body or footer. Only Git-generated merge/revert messages are exempt from commit checks; PR titles never are. Autosquash temporary `fixup!`/`squash!` commits before merging.
+
+CI checks each PR's title and all its commits, including release bot PRs. Editing the PR title reruns validation. Main pushes check only the newly pushed range, leaving pre-existing history intact. Manual and exact-tag validation check the latest commit. After `npm ci`, check an intended message with `echo 'fix: describe the change' | npm run lint:commits`, or a branch range with `npm run lint:commits -- --from origin/main --to HEAD`. Fix invalid messages before merging; do not bypass the check with an arbitrary non-conventional squash title. Use `npx commitlint` with the same arguments if your shell consumes npm's argument separator.
+
+Release Please manages stable `X.Y.Z` versions, `vX.Y.Z` tags, and `CHANGELOG.md`. Keep its version annotations on `const.py` and the README resource examples intact. Do not update versions manually for ordinary changes. Review generated release notes for useful upgrade instructions; retain relevant release history only in the changelog.
+
+Keep generated assets committed because HACS installs the tagged source directory. Draft releases must pass validation against their exact tag before publication. Release Please needs write permissions to manage its PRs, labels, drafts, and CI dispatch; validation jobs remain read-only. Do not move published tags or replace published releases with different code. Run HACS validation without ignored checks before submitting to `hacs/default`.

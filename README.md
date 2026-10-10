@@ -33,16 +33,18 @@ title: Alarms
 # max_height: 600  # Optional scrollable tile area height, in pixels
 ```
 
-The integration registers its card resource automatically for storage-mode dashboards. If the card is missing, add `/dashboard_alarms/dashboard-alarms-card.js?v=0.1.1` under **Settings → Dashboards → Resources** as a **JavaScript module**.
+The integration registers its card resource automatically for storage-mode dashboards. If the card is missing, add `/dashboard_alarms/dashboard-alarms-card.js?v=0.1.1` under **Settings → Dashboards → Resources** as a **JavaScript module**. <!-- x-release-please-version -->
 
 For YAML-managed resources, merge this into your existing configuration:
 
+<!-- x-release-please-start-version -->
 ```yaml
 lovelace:
   resources:
     - url: /dashboard_alarms/dashboard-alarms-card.js?v=0.1.1
       type: module
 ```
+<!-- x-release-please-end -->
 
 ## Using alarms
 
@@ -145,6 +147,7 @@ python -m pylint custom_components/dashboard_alarms tools
 python -m ruff check custom_components tests tools
 python -m pytest -q
 python tools/verify_release.py
+python tools/verify_hacs.py
 python tools/build.py
 python tools/verify_archive.py
 ```
@@ -169,21 +172,19 @@ Build outputs are written to `outputs/`: an installation ZIP, a source ZIP, and 
 
 Release versions use `X.Y.Z`, with Git tags named `vX.Y.Z`. HACS installs the files from the tagged integration directory; the attached ZIP is for manual installation. The card and ringing dialog ship with the integration, so they do not need separate releases.
 
-1. Open a release PR updating `manifest.json`, `const.py`, `package.json`, the root package versions in `package-lock.json`, and the card resource versions in this README. `npm version X.Y.Z --no-git-tag-version` updates the npm files.
-2. Replace [release-notes.md](release-notes.md) with notes for this version, starting with `# X.Y.Z`. Describe user-facing changes, minimum Home Assistant version, and any upgrade steps. This file holds only the current release; published GitHub releases retain earlier notes.
-3. Run `python tools/verify_release.py`, `python tools/build.py`, and `python tools/verify_archive.py`. Commit any regenerated integration assets. Merge after the **Validation** workflow passes its Python, Chromium, hassfest, and HACS checks.
-4. Tag the merged commit and push the tag. For the first release, whose manifest version is `0.1.1`:
+1. Use [Conventional Commits](https://www.conventionalcommits.org/) for each commit and the PR title: `fix: reduce alarm playback gaps`, `feat: add alarm controls`, or `feat!: change the alarm API`. CI checks PR titles, all commits in a PR, and new commits pushed to `main`. Title edits rerun the check; existing project history is not checked again. Fixes produce patch releases; features produce minor releases. Before version 1.0, breaking changes also produce minor releases.
+2. The **Release Please** workflow validates `main` and maintains a release PR. It updates the integration manifest, Python version constant, npm files, this README's resource versions, `.release-please-manifest.json`, and [CHANGELOG.md](CHANGELOG.md) together. Review the generated notes and add upgrade instructions when needed.
+3. Wait for the release PR's **Validation** checks to pass, then merge it. Release Please creates the tag and a draft GitHub release. The publishing workflow reruns Python, Chromium, hassfest, and HACS checks against that exact tag, attaches the verified installation ZIP, and publishes the draft only after success.
 
-   ```sh
-   git switch main
-   git pull --ff-only
-   git tag -a v0.1.1 -m "Dashboard Alarms 0.1.1"
-   git push origin v0.1.1
-   ```
+Allowed commit types are `build`, `chore`, `ci`, `deps`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, and `test`, with an optional scope. A `BREAKING CHANGE:` footer also marks a breaking change. Check a message locally with `echo 'fix: describe the change' | npm run lint:commits`, or run `npm run lint:commits -- --from origin/main --to HEAD` for a branch. Standard Git merge/revert messages are exempt from commit checks; PR titles must use the conventional format.
 
-The **Release** workflow reruns the shared validation against the tag. It rejects mismatched versions, missing release notes, generated assets that differ from the committed files, and commits not merged into `main`. After all checks pass, it publishes a GitHub release and attaches the verified installation ZIP. It uses the built-in `GITHUB_TOKEN`; no additional secret is needed. HACS offers published versions, with the default branch hidden.
+The workflow uses the built-in `GITHUB_TOKEN`; no additional secret is needed. GitHub's **Settings → Actions → General → Workflow permissions → Allow GitHub Actions to create and approve pull requests** must be enabled. The automation creates PRs and does not approve or merge them. It explicitly dispatches the Validation workflow on the release PR branch so its checks run without the approval needed for ordinary bot-created PR events. Other PR workflows may still show an approval prompt.
 
-If a run fails before publishing, fix transient problems and rerun it from GitHub Actions. Code or metadata fixes require a new commit and tag; keep published tags unchanged. Use a new patch version for fixes to a published release. Do not create a release manually before its checks finish.
+HACS offers published versions, with the default branch hidden. The release checks reject mismatched versions, missing changelog entries, generated assets that differ from committed files, and commits not merged into `main`. Keep generated assets committed because HACS installs the tagged source directory.
+
+If publishing a draft fails, rerun **Publish release** from GitHub Actions with its `vX.Y.Z` tag. This reruns validation before publishing. Code fixes require a new release PR and version. Keep published tags unchanged and do not publish drafts manually before checks finish.
+
+For submission to the HACS default repository list, use the verified requirements and submission details in [.github/HACS_SUBMISSION.md](.github/HACS_SUBMISSION.md).
 
 ## License
 

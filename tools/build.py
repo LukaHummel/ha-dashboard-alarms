@@ -97,8 +97,11 @@ def package():
             for path in sorted((ROOT / directory).rglob("*")):
                 if path.is_file() and "__pycache__" not in path.parts:
                     archive.write(path, path.relative_to(ROOT).as_posix())
-        for name in ("README.md", "AGENTS.md", "release-notes.md", "LICENSE", "hacs.json", "pyproject.toml", "requirements-dev.txt",
+        for name in ("README.md", "AGENTS.md", "CHANGELOG.md", "LICENSE", "hacs.json", "pyproject.toml", "requirements-dev.txt",
                      "package.json", "package-lock.json", ".gitignore", ".gitattributes"):
+            archive.write(ROOT / name, name)
+        for name in ("release-please-config.json", ".release-please-manifest.json", ".commitlintrc.cjs",
+                     ".github/HACS_SUBMISSION.md"):
             archive.write(ROOT / name, name)
     print(f"Built {source}")
 

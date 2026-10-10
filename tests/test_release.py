@@ -21,7 +21,8 @@ def release_root(tmp_path):
     (tmp_path / "README.md").write_text(
         "Resource: `/dashboard_alarms/dashboard-alarms-card.js?v=1.2.3`\n", encoding="utf-8"
     )
-    (tmp_path / "release-notes.md").write_text("# 1.2.3\n\nFix alarm playback.\n", encoding="utf-8")
+    (tmp_path / ".release-please-manifest.json").write_text('{".": "1.2.3"}', encoding="utf-8")
+    (tmp_path / "CHANGELOG.md").write_text("# Changelog\n\n## 1.2.3\n\nFix alarm playback.\n", encoding="utf-8")
     return tmp_path
 
 
@@ -69,10 +70,24 @@ def test_missing_or_stale_card_resource_is_rejected(release_root, resource):
         verify_release(release_root)
 
 
-@pytest.mark.parametrize("notes", ["# 1.2.2\nOld notes", "# 1.2.3\n\n"])
+@pytest.mark.parametrize("notes", ["## 1.2.2\nOld notes", "## 1.2.3\n\n"])
 def test_missing_or_stale_notes_are_rejected(release_root, notes):
-    (release_root / "release-notes.md").write_text(notes, encoding="utf-8")
-    with pytest.raises(ValueError, match="release-notes.md"):
+    (release_root / "CHANGELOG.md").write_text(notes, encoding="utf-8")
+    with pytest.raises(ValueError, match="CHANGELOG.md"):
+        verify_release(release_root)
+
+
+def test_linked_changelog_extracts_only_current_release(release_root):
+    (release_root / "CHANGELOG.md").write_text(
+        "# Changelog\n\n## [1.2.3](https://example.com/compare) (2026-10-10)\n\n"
+        "### Bug Fixes\n\nFix alarm playback.\n\n## 1.2.2\n\nOlder release.\n", encoding="utf-8"
+    )
+    assert verify_release(release_root)[1] == "### Bug Fixes\n\nFix alarm playback.\n"
+
+
+def test_stale_release_please_manifest_is_rejected(release_root):
+    (release_root / ".release-please-manifest.json").write_text('{".": "1.2.2"}', encoding="utf-8")
+    with pytest.raises(ValueError, match="Release Please manifest"):
         verify_release(release_root)
 
 

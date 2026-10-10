@@ -31,6 +31,9 @@ def verify_release(root=ROOT, tag=None):
         "package.json": package["version"],
         "package-lock.json": lock["version"],
         "package-lock.json root package": lock["packages"][""]["version"],
+        "Release Please manifest": json.loads(
+            (root / ".release-please-manifest.json").read_text(encoding="utf-8")
+        )["."],
     }
     for name, value in versions.items():
         if value != version:
@@ -40,9 +43,14 @@ def verify_release(root=ROOT, tag=None):
     if not resource_versions or any(value != version for value in resource_versions):
         raise ValueError("README card resource versions must match manifest.json")
 
-    heading, _, notes = (root / "release-notes.md").read_text(encoding="utf-8").partition("\n")
-    if heading.strip() != f"# {version}" or not notes.strip():
-        raise ValueError(f"release-notes.md must start with '# {version}' and contain release notes")
+    changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+    sections = list(re.finditer(r"^## \[?([0-9]+\.[0-9]+\.[0-9]+)(?:\]|[ \t]|$).*", changelog, re.MULTILINE))
+    if not sections or sections[0].group(1) != version:
+        raise ValueError(f"CHANGELOG.md must start with release notes for {version}")
+    end = sections[1].start() if len(sections) > 1 else len(changelog)
+    notes = changelog[sections[0].end():end].strip()
+    if not notes:
+        raise ValueError(f"CHANGELOG.md must contain release notes for {version}")
     return version, notes.strip() + "\n"
 
 

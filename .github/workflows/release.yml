@@ -1,58 +1,59 @@
-name: Release
+name: Release Please
 
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-please-main
   cancel-in-progress: false
 
 jobs:
   validate:
     uses: ./.github/workflows/pylint.yml
 
-  publish:
+  release-please:
     needs: validate
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: write
+      issues: write
+      pull-requests: write
+      actions: write
+    outputs:
+      release-created: ${{ steps.release.outputs.release_created }}
+      tag: ${{ steps.release.outputs.tag_name }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: googleapis/release-please-action@0dfd8538845b8e92600d271a895a5372865d4062 # v5.0.0
+      id: release
       with:
-        fetch-depth: 0
-        persist-credentials: false
-    - name: Require a commit merged into main
-      run: git merge-base --is-ancestor HEAD origin/main
-    - uses: actions/setup-python@v5
-      with:
-        python-version: "3.14"
-    - name: Prepare release notes and version
-      id: metadata
-      env:
-        RELEASE_TAG: ${{ github.ref_name }}
-      run: >-
-        python tools/verify_release.py --tag "$RELEASE_TAG"
-        --notes-output outputs/release-notes.md --github-output "$GITHUB_OUTPUT"
-    - uses: actions/download-artifact@v4
-      with:
-        name: installation-archive
-        path: outputs
-    - name: Verify downloaded installation archive
-      run: python tools/verify_archive.py
-    - name: Publish GitHub release
+        config-file: release-please-config.json
+        manifest-file: .release-please-manifest.json
+    - name: Start validation for the release PR
+      if: steps.release.outputs.prs_created == 'true'
       env:
         GH_TOKEN: ${{ github.token }}
         GH_REPO: ${{ github.repository }}
-        RELEASE_TAG: ${{ github.ref_name }}
-        RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
+        RELEASE_PRS: ${{ steps.release.outputs.prs }}
+      # Explicit dispatch works with GITHUB_TOKEN, without approving bot PR runs.
       run: |
-        gh release create "$RELEASE_TAG" \
-          "outputs/dashboard-alarms-${RELEASE_VERSION}.zip" \
-          --verify-tag \
-          --title "Dashboard Alarms ${RELEASE_VERSION}" \
-          --notes-file outputs/release-notes.md
+        printf '%s' "$RELEASE_PRS" | jq -r '.[] | [.headBranchName, .number] | @tsv' | while IFS=$'\t' read -r branch number; do
+          gh workflow run pylint.yml --ref "$branch" -f pr-number="$number"
+        done
+
+  publish:
+    needs: release-please
+    if: needs.release-please.outputs.release-created == 'true'
+    uses: ./.github/workflows/publish-release.yml
+    permissions:
+      contents: write
+      pull-requests: read
+    with:
+      tag: ${{ needs.release-please.outputs.tag }}

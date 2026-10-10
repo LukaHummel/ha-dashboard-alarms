@@ -1,22 +1,90 @@
 name: Validation
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, edited]
   workflow_dispatch:
+    inputs:
+      pr-number:
+        description: PR number when validating a release PR branch
+        type: string
+        default: ""
   workflow_call:
+    inputs:
+      pr-number:
+        description: PR number when validating a release PR branch
+        type: string
+        default: ""
+      ref:
+        description: Commit or tag to validate
+        type: string
+        default: ""
+      release-tag:
+        description: Expected release tag, when validating a release
+        type: string
+        default: ""
+      upload-archive:
+        description: Save the verified installation archive for publishing
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
+  commit-messages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.ref || github.sha }}
+        fetch-depth: 0
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+        cache: npm
+    - run: npm ci
+    - name: Check PR title and new commit messages
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ inputs.pr-number || github.event.pull_request.number }}
+        EVENT_NAME: ${{ github.event_name }}
+        PUSH_BEFORE: ${{ github.event.before }}
+        RELEASE_TAG: ${{ inputs.release-tag }}
+      run: |
+        head=$(git rev-parse HEAD)
+        if [ -n "$PR_NUMBER" ]; then
+          if [ "$EVENT_NAME" = pull_request ]; then
+            pr=$(jq '.pull_request' "$GITHUB_EVENT_PATH")
+          else
+            pr=$(gh api "repos/$GH_REPO/pulls/$PR_NUMBER")
+            test "$head" = "$(printf '%s' "$pr" | jq -r '.head.sha')"
+          fi
+          printf '%s\n' "$pr" | jq -r '.title' | COMMITLINT_PR_TITLE=true npm run lint:commits -- --verbose
+          base=$(printf '%s' "$pr" | jq -r '.base.sha')
+          head=$(printf '%s' "$pr" | jq -r '.head.sha')
+        elif [ "$EVENT_NAME" = push ] && [ -z "$RELEASE_TAG" ] && [ -n "$PUSH_BEFORE" ] && ! [[ "$PUSH_BEFORE" =~ ^0+$ ]]; then
+          base=$PUSH_BEFORE
+        else
+          # Manual/tag validation checks the latest commit, not legacy history.
+          if ! base=$(git rev-parse HEAD^ 2>/dev/null); then
+            git log -1 --format=%B | npm run lint:commits -- --verbose
+            exit 0
+          fi
+        fi
+        npm run lint:commits -- --from "$base" --to "$head" --verbose
+
   lint-and-test:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
     - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.ref || github.sha }}
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -27,10 +95,12 @@ jobs:
       run: python -m pip install -r requirements-dev.txt
     - name: Check release metadata
       run: python tools/verify_release.py
+    - name: Check HACS repository layout
+      run: python tools/verify_hacs.py
     - name: Check tag matches the release
-      if: startsWith(github.ref, 'refs/tags/')
+      if: inputs.release-tag != ''
       env:
-        RELEASE_TAG: ${{ github.ref_name }}
+        RELEASE_TAG: ${{ inputs.release-tag }}
       run: python tools/verify_release.py --tag "$RELEASE_TAG"
     - name: Pylint
       run: python -m pylint custom_components/dashboard_alarms tools
@@ -44,7 +114,7 @@ jobs:
         python tools/verify_archive.py
         git diff --exit-code -- custom_components/dashboard_alarms
     - name: Save verified installation archive
-      if: startsWith(github.ref, 'refs/tags/')
+      if: inputs.upload-archive
       uses: actions/upload-artifact@v4
       with:
         name: installation-archive
@@ -57,6 +127,8 @@ jobs:
     timeout-minutes: 15
     steps:
     - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.ref || github.sha }}
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
@@ -74,6 +146,8 @@ jobs:
     timeout-minutes: 10
     steps:
     - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.ref || github.sha }}
     - name: Home Assistant integration validation
       uses: home-assistant/actions/hassfest@master
 
@@ -82,11 +156,13 @@ jobs:
     timeout-minutes: 10
     steps:
     - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.ref || github.sha }}
     - name: HACS integration validation
       uses: hacs/action@main
       env:
         # Validate this push/tag or the PR head, rather than an older release.
-        REPOSITORY_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        REPOSITORY_REF: ${{ inputs.ref || (github.event_name == 'pull_request' && github.event.pull_request.head.sha) || github.sha }}
       with:
         category: integration
         comment: false
