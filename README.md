@@ -33,7 +33,7 @@ title: Alarms
 # max_height: 600  # Optional scrollable tile area height, in pixels
 ```
 
-The integration registers its card resource automatically for storage-mode dashboards. If the card is missing, add `/dashboard_alarms/dashboard-alarms-card.js?v=0.1.1` under **Settings → Dashboards → Resources** as a **JavaScript module**. <!-- x-release-please-version -->
+The integration registers its card resource automatically for storage-mode dashboards. If the card is missing, add `/dashboard_alarms/dashboard-alarms-card.js?v=0.2.0` under **Settings → Dashboards → Resources** as a **JavaScript module**. <!-- x-release-please-version -->
 
 For YAML-managed resources, merge this into your existing configuration:
 
@@ -41,7 +41,7 @@ For YAML-managed resources, merge this into your existing configuration:
 ```yaml
 lovelace:
   resources:
-    - url: /dashboard_alarms/dashboard-alarms-card.js?v=0.1.1
+    - url: /dashboard_alarms/dashboard-alarms-card.js?v=0.2.0
       type: module
 ```
 <!-- x-release-please-end -->
