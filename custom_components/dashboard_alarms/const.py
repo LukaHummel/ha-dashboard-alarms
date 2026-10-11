@@ -1,7 +1,7 @@
 """Constants for Dashboard Alarms."""
 
 DOMAIN = "dashboard_alarms"
-VERSION = "0.1.1"  # x-release-please-version
+VERSION = "0.2.0"  # x-release-please-version
 PLATFORMS = ["calendar"]
 STATIC_URL = "/dashboard_alarms"
 CARD_URL = f"{STATIC_URL}/dashboard-alarms-card.js?v={VERSION}"
