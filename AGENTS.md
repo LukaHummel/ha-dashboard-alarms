@@ -21,7 +21,6 @@ Dashboard Alarms is a local Home Assistant custom integration with a bundled das
 - `.github/workflows/release.yml`: Release Please creates release PRs and draft releases after main validation, and explicitly dispatches release PR validation with the built-in token.
 - `.github/workflows/publish-release.yml`: validates the exact draft release tag, uploads the verified manual ZIP, and publishes only after success; supports manual retry by tag.
 - `release-please-config.json` and `.release-please-manifest.json`: release strategy and current version. The node strategy manages npm files; additional updaters manage the integration and README versions.
-- `.github/HACS_SUBMISSION.md`: current HACS default-list requirements and submission evidence.
 - `.commitlintrc.cjs`: Conventional Commit rules shared by local checks and CI.
 - `brand/icon.svg` inside the integration: editable source for the bundled `brand/icon.png`.
 
@@ -69,6 +68,8 @@ The manifest uses `ical>=14.3.0` because Home Assistant also depends on this pac
 
 Do not commit virtual environments, dependency folders, release ZIPs, caches, or credentials. Include a focused regression test when changing scheduling, persistence, permissions, or ownership behavior.
 
+Keep the source archive's required file list aligned with tracked repository files. When deleting or renaming a file, update packaging and documentation references in the same change. Verify that the source ZIP can be extracted and rebuilt without local-only files.
+
 Every authored commit and PR title must follow Conventional Commits: `type(optional-scope): description`, with an optional `!` before the colon for a breaking change. Allowed types are `build`, `chore`, `ci`, `deps`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, and `test`. Examples: `fix(audio): reduce playback gaps`, `feat: add alarm controls`, and `feat(api)!: change the alarm API`. A `BREAKING CHANGE:` footer is also accepted. Use a blank line before the body or footer. Only Git-generated merge/revert messages are exempt from commit checks; PR titles never are. Autosquash temporary `fixup!`/`squash!` commits before merging.
 
 CI checks each PR's title and all its commits, including release bot PRs. Editing the PR title reruns validation. Main pushes check only the newly pushed range, leaving pre-existing history intact. Manual and exact-tag validation check the latest commit. After `npm ci`, check an intended message with `echo 'fix: describe the change' | npm run lint:commits`, or a branch range with `npm run lint:commits -- --from origin/main --to HEAD`. Fix invalid messages before merging; do not bypass the check with an arbitrary non-conventional squash title. Use `npx commitlint` with the same arguments if your shell consumes npm's argument separator.
@@ -76,3 +77,5 @@ CI checks each PR's title and all its commits, including release bot PRs. Editin
 Release Please manages stable `X.Y.Z` versions, `vX.Y.Z` tags, and `CHANGELOG.md`. Keep its version annotations on `const.py` and the README resource examples intact. Do not update versions manually for ordinary changes. Review generated release notes for useful upgrade instructions; retain relevant release history only in the changelog.
 
 Keep generated assets committed because HACS installs the tagged source directory. Draft releases must pass validation against their exact tag before publication. Release Please needs write permissions to manage its PRs, labels, drafts, and CI dispatch; validation jobs remain read-only. Do not move published tags or replace published releases with different code. Run HACS validation without ignored checks before submitting to `hacs/default`.
+
+If a merged release PR fails validation before its tag is created and needs a code fix, remove its `autorelease: pending` label so Release Please prepares a fresh release PR containing the fix. Rerunning an old workflow validates its original commit and cannot include a later correction.

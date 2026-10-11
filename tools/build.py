@@ -100,8 +100,7 @@ def package():
         for name in ("README.md", "AGENTS.md", "CHANGELOG.md", "LICENSE", "hacs.json", "pyproject.toml", "requirements-dev.txt",
                      "package.json", "package-lock.json", ".gitignore", ".gitattributes"):
             archive.write(ROOT / name, name)
-        for name in ("release-please-config.json", ".release-please-manifest.json", ".commitlintrc.cjs",
-                     ".github/HACS_SUBMISSION.md"):
+        for name in ("release-please-config.json", ".release-please-manifest.json", ".commitlintrc.cjs"):
             archive.write(ROOT / name, name)
     print(f"Built {source}")
 

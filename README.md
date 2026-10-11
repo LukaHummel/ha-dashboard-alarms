@@ -184,7 +184,9 @@ HACS offers published versions, with the default branch hidden. The release chec
 
 If publishing a draft fails, rerun **Publish release** from GitHub Actions with its `vX.Y.Z` tag. This reruns validation before publishing. Code fixes require a new release PR and version. Keep published tags unchanged and do not publish drafts manually before checks finish.
 
-For submission to the HACS default repository list, use the verified requirements and submission details in [.github/HACS_SUBMISSION.md](.github/HACS_SUBMISSION.md).
+If validation fails after merging a release PR and its tag was never created, remove `autorelease: pending` from that merged PR before merging a code fix. Release Please can then prepare a fresh release PR containing the correction. Rerunning an old workflow uses its original commit. See [Release Please's pending-release recovery instructions](https://github.com/googleapis/release-please#step-2-ensure-no-autorelease-pending-or-autorelease-triggered-label-in-an-old-pr).
+
+For submission to the HACS default repository list, follow the [integration requirements](https://www.hacs.xyz/docs/publish/integration/) and [submission instructions](https://www.hacs.xyz/docs/publish/include/). Provide the latest published release and successful HACS/hassfest validation links in the submission PR.
 
 ## License
 
