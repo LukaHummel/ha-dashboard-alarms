@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/LukaHummel/ha-dashboard-alarms/compare/v0.2.0...v0.3.0) (2026-10-11)
+
+
+### Features
+
+* add brand icon image ([689ebd9](https://github.com/LukaHummel/ha-dashboard-alarms/commit/689ebd9046e638696036746ed2435a48efe9ec8b))
+* automate releases and add HACS validation ([3360be8](https://github.com/LukaHummel/ha-dashboard-alarms/commit/3360be8618d7d4e7d6c5d94eae58c332c71cc525))
+
+
+### Bug Fixes
+
+* **build:** rebuild source archives from tracked files ([992f579](https://github.com/LukaHummel/ha-dashboard-alarms/commit/992f579d39cf5120d9e87cf236fc813d57d2b07b))
+
 ## [0.2.0](https://github.com/LukaHummel/ha-dashboard-alarms/compare/v0.1.1...v0.2.0) (2026-10-11)
 
 
